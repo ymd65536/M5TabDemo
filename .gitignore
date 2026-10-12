@@ -11,3 +11,6 @@ include
 
 # macOS
 .DS_Store
+
+# upstream source
+Tab5_thinclient

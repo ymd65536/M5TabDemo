@@ -1,0 +1,15 @@
+[package]
+name = "tab5-p4-hello"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+
+[[bin]]
+name = "tab5-p4-hello"
+harness = false
+
+[dependencies]
+esp-idf-svc = { version = "0.53.0" }
+
+[build-dependencies]
+embuild = "0.33.5"

@@ -14,3 +14,6 @@ include
 
 # upstream source
 Tab5_thinclient
+
+# Rust ESP32-P4 prototype
+/rust/tab5_p4_hello/.embuild/

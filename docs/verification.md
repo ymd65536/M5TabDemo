@@ -12,13 +12,15 @@
 
 | 項目 | 結果 |
 | --- | --- |
-| 作業リポジトリ | README雛形とライセンス等のみ。PlatformIO設定、firmware source、testsなし。 |
+| 作業リポジトリ | Rust ESP-IDF Hello World crateを追加。Arduino/PlatformIO upstream source、Tab5 BSP統合、testsはなし。 |
 | ホスト | Linux x86_64環境。macOS Apple Siliconではない。 |
 | Python | Python 3.12.3を確認。 |
 | PlatformIO | `pio` コマンドは見つからず、未インストール。 |
 | 実機 | Tab5 / Tab5 Keyboard / microSDは接続・操作していない。 |
 | 許可対象操作 | ファームウェア書き込み、フラッシュ消去、既存データ上書き、STM32更新、SSH接続を未実施。 |
-| build / test | このリポジトリにはソースとbuild設定がないため実行していない。upstreamのビルド結果もなし。 |
+| Rust build | `cargo build --verbose`を実行。ESP-IDF source/toolchain準備中に`dl.espressif.com`の名前解決が失敗し、constraints fileを取得できず中断。build不成功。 |
+| PlatformIO build | この実行環境では`pio`がなく、既存C++ upstream sourceもcheckoutしていないため未実施。 |
+| test / HIL | 自動テストなし。Tab5実機での書き込み・動作試験なし。 |
 
 ## Phase 1 — 既存ファームウェア調査
 
@@ -45,7 +47,8 @@
 - [ ] **要許可:** 正しいデバイスと書き込み対象を確認後に限りuploadを試す。
 - [ ] 初回書き込みやLittleFS/partitionを含む更新方法について、macOSで検証された手順を確立する。Windows用PowerShellスクリプトをmacOSで実行できるとみなさない。
 
-この作業ではmacOSもupstreamソースのローカルコピーも利用できなかったため、build結果を報告できません。
+この作業ではmacOSもupstream C++ソースのローカルコピーも利用できませんでした。Rust
+prototype buildは試しましたが、download serverのDNS failureでESP-IDF build setupが停止しました。
 
 ## Phase 3 — Tab5 Keyboard
 

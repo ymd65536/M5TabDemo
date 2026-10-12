@@ -19,6 +19,12 @@ macOSでもTab5実機接続環境でもないため、ビルド・書き込み�
 実機確認は未実施です。コマンドは手順として記載していますが、実機への書き込みや
 外部SSH接続をこの作業で実行していません。
 
+Rust対応の別個の調査用プロジェクトは
+[rust/tab5_p4_hello](rust/tab5_p4_hello/README.md) にあります。既存C++ファームウェアの
+移植ではなく、ESP-IDF RustでP4のビルドとシリアルHello Worldを試す独立プロトタイプです。
+Rustターゲット、公式Tab5 BSP、キーボード、ディスプレイ、C6 Wi-Fi、SSHの評価は
+[docs/rust-esp32p4.md](docs/rust-esp32p4.md) を参照してください。
+
 ## ハードウェアと公式資料
 
 - M5Stack Tab5: ESP32-P4 搭載。製品仕様は
@@ -158,7 +164,9 @@ READMEは特にSSH/SCP依存のLibSSH-ESP32/libsshについてLGPL-2.1-or-later�
 [docs/verification.md](docs/verification.md) に分けて記載しています。システム構成は
 [docs/architecture.md](docs/architecture.md) を参照してください。
 
-現状は文書のみのリポジトリであり、upstreamソースのビルド結果はありません。この実行環境
-では `pio` が利用できず、macOS、Tab5、Tab5 Keyboard、microSD、SSHサーバーも操作して
-いません。実機の書き込み・消去・既存データ変更・キーボード側STM32更新・外部SSH接続は
-行っていません。
+このリポジトリには既存C++ upstreamのソースやPlatformIO設定はなく、Rust側には別個の
+Hello Worldプロトタイプがあります。ESP-IDF Rustのcross-buildは依存取得中、
+Espressif download serverの名前解決失敗で停止し、成功していません。この実行環境では
+`pio` が利用できず、macOS、Tab5、Tab5 Keyboard、microSD、SSHサーバーも操作して
+いません。実機の書き込み・消去・既存データ変更・キーボード側STM32更新・C6 firmware
+変更・外部SSH接続は行っていません。

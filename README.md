@@ -37,25 +37,25 @@ macOSでもTab5実機接続環境でもないため、ビルド・書き込み�
 1. upstream のソースを作業用ディレクトリに取得します。認証情報をソースやGit管理
    ファイルへ書き込まないでください。
 
-   ```sh
-   git clone https://github.com/airpocket-soundman/Tab5_thinclient.git
-   cd Tab5_thinclient
-   ```
+```sh
+git clone https://github.com/airpocket-soundman/Tab5_thinclient.git
+cd Tab5_thinclient
+```
 
 2. Python仮想環境を作り、PlatformIO Coreをその環境にインストールします。
 
-   ```sh
-   python3 -m venv .venv
-   source .venv/bin/activate
-   python -m pip install --upgrade pip
-   python -m pip install platformio
-   ```
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install platformio
+```
 
 3. ファームウェアをビルドします。
 
-   ```sh
-   pio run -e tab5
-   ```
+```sh
+pio run -e tab5
+```
 
 `platformio.ini` が指定する主な構成は、`pioarduino/platform-espressif32` の stable
 platform、Arduino framework、`esp32-p4-evboard`、LittleFS、独自 `partitions.csv`、

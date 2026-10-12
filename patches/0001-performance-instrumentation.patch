@@ -1,0 +1,173 @@
+--- a/src/main.cpp	2026-10-12 19:27:33.385030021 +0000
++++ b/src/main.cpp	2026-10-12 19:27:29.356579025 +0000
+@@ -4,6 +4,7 @@
+ #include "Tab5KeyboardInput.hpp"
+ #include "TerminalBuffer.hpp"
+ #include "TerminalEmulator.hpp"
++#include "PerformanceStats.hpp"
+ #include "WifiProfiles.hpp"
+ #include "fonts/TerminusBitmap.hpp"
+ 
+@@ -6692,6 +6693,7 @@
+ 
+ void draw()
+ {
++    TAB5_PERF_SCOPE("terminal_draw");
+     screenSprite.startWrite();
+     if (!(screen == Screen::Terminal && ssh.connected())) {
+         screenSprite.fillScreen(TFT_BLACK);
+@@ -6729,7 +6731,7 @@
+         drawImageOverlay(false);
+     }
+ 
+-    screenSprite.pushSprite(0, 0);
++    { TAB5_PERF_SCOPE("sprite_push"); screenSprite.pushSprite(0, 0); }
+     if (imageOverlayActive) {
+         drawImageOverlayDirect();
+         imageOverlayDrawn = true;
+@@ -9885,18 +9887,21 @@
+ 
+ void loop()
+ {
++    TAB5_PERF_SCOPE("main_loop");
+     M5.update();
+     pollSerialApi();
+     handleTouch();
+-    keyboard.update();
++    { TAB5_PERF_SCOPE("keyboard_update"); keyboard.update(); }
+     while (keyboard.available()) {
++        TAB5_PERF_SCOPE("key_action");
+         handleAction(keyboard.read());
+     }
+-    pollWifi();
++    { TAB5_PERF_SCOPE("wifi_poll"); pollWifi(); }
+     pollWifiScan();
+     pollTimeSync();
+     pollSshConnectJob();
+     if (!sshConnectJobRunning && !storageBridgeJobRunning) {
++        TAB5_PERF_SCOPE("ssh_poll");
+         pollSsh();
+     }
+     if (!sshConnectJobRunning && !storageBridgeJobRunning) {
+@@ -9932,10 +9937,11 @@
+         headerDirty = false;
+     } else if (dirty && millis() - lastDraw > drawInterval) {
+         lastDraw = millis();
+-        draw();
++        { TAB5_PERF_SCOPE("draw_schedule"); draw(); }
+     } else if (headerDirty && millis() - lastDraw > drawInterval) {
+         lastDraw = millis();
+         drawHeaderOnly();
+     }
++    TAB5_PERF_REPORT();
+     delay(2);
+ }
+--- a/src/Tab5KeyboardInput.cpp	2026-10-12 19:27:33.418239499 +0000
++++ b/src/Tab5KeyboardInput.cpp	2026-10-12 19:27:29.357069632 +0000
+@@ -1,4 +1,5 @@
+ #include "Tab5KeyboardInput.hpp"
++#include "PerformanceStats.hpp"
+ 
+ #include <M5Unified.h>
+ 
+@@ -1103,6 +1104,7 @@
+ 
+ void Tab5KeyboardInput::update()
+ {
++    TAB5_PERF_SCOPE("keyboard_update_internal");
+ #if ENABLE_USB_HOST_KEYBOARD
+     if (usbHostStarted) {
+         tuh_task_ext(0, false);
+--- /dev/null	2026-10-12 19:25:58.539976692 +0000
++++ b/src/PerformanceStats.hpp	2026-10-12 19:28:07.000000000 +0000
+@@ -0,0 +1,79 @@
++#pragma once
++
++#include <Arduino.h>
++#include <esp_timer.h>
++#include <algorithm>
++#include <stdint.h>
++
++#ifndef TAB5_PERF_ENABLE
++#define TAB5_PERF_ENABLE 0
++#endif
++
++#if TAB5_PERF_ENABLE
++namespace tab5perf {
++class Stats {
++public:
++    struct Metric {
++        const char* name;
++        uint64_t count{0};
++        uint64_t total{0};
++        uint32_t maximum{0};
++        uint32_t samples[128]{};
++    };
++
++    Metric& metric(const char* name)
++    {
++        for (size_t i = 0; i < _metricCount; ++i) {
++            if (strcmp(_metrics[i].name, name) == 0) return _metrics[i];
++        }
++        Metric& result = _metrics[_metricCount++];
++        result.name = name;
++        return result;
++    }
++
++    void record(const char* name, uint32_t elapsed)
++    {
++        Metric& m = metric(name);
++        m.total += elapsed;
++        m.maximum = max(m.maximum, elapsed);
++        m.samples[m.count % 128] = elapsed;
++        ++m.count;
++    }
++
++    void report()
++    {
++        const uint32_t now = millis();
++        if (now - _lastReport < 5000) return;
++        _lastReport = now;
++        Serial.printf("[tab5] perf window_ms=5000\r\n");
++        for (size_t i = 0; i < _metricCount; ++i) {
++            Metric& m = _metrics[i];
++            const size_t n = min<uint64_t>(m.count, 128);
++            uint32_t ordered[128];
++            memcpy(ordered, m.samples, n * sizeof(uint32_t));
++            std::sort(ordered, ordered + n);
++            const uint32_t p95 = n ? ordered[(n * 95 + 99) / 100 - 1] : 0;
++            const uint64_t average = m.count ? m.total / m.count : 0;
++            Serial.printf("[tab5] perf name=%s count=%llu avg_us=%llu max_us=%lu p95_us=%lu\r\n",
++                          m.name, static_cast<unsigned long long>(m.count),
++                          static_cast<unsigned long long>(average),
++                          static_cast<unsigned long>(m.maximum), static_cast<unsigned long>(p95));
++        }
++    }
++
++private:
++    Metric _metrics[16]{};
++    size_t _metricCount{0};
++    uint32_t _lastReport{0};
++};
++
++inline Stats& stats()
++{
++    static Stats instance;
++    return instance;
++}
++
++class Scope {
++public:
++    explicit Scope(const char* name) : _name(name), _start(esp_timer_get_time()) {}
++    ~Scope() { stats().record(_name, static_cast<uint32_t>(esp_timer_get_time() - _start)); }
++private:
++    const char* _name;
++    int64_t _start;
++};
++}
++#define TAB5_PERF_SCOPE(name) tab5perf::Scope tab5PerfScope##__LINE__(name)
++#define TAB5_PERF_REPORT() tab5perf::stats().report()
++#else
++#define TAB5_PERF_SCOPE(name) do { } while (0)
++#define TAB5_PERF_REPORT() do { } while (0)
++#endif
